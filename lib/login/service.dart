@@ -3,7 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<bool> loginUser(String login, String password) async {
-  final url = Uri.parse('http://192.168.100.119:3030/users/login');
+  final url = Uri.parse(
+      'http://localhost:3030/users/login'); // http://192.168.100.119:3030/users/login');
   final response = await http.post(
     url,
     headers: {'Content-Type': 'application/json'},

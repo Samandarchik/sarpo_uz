@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:sarpo_uz/admin/create_user.dart';
 import 'package:sarpo_uz/core/di/di.dart';
 import 'package:sarpo_uz/ui/login.dart';
 import 'package:sarpo_uz/ui/qr-code.dart';
@@ -30,7 +31,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: BarcodeScannerPage(),
+      home: UserHomePage(),
     );
   }
 }

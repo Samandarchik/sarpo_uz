@@ -3,10 +3,13 @@
 //   flutter:
 //     sdk: flutter
 //   http: ^1.1.0  # HTTP requests uchun
+//   web_socket_channel: ^2.4.0  # WebSocket uchun
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:web_socket_channel/io.dart';
 import 'dart:convert';
 
 class BarcodeScannerPage extends StatefulWidget {
@@ -17,12 +20,21 @@ class BarcodeScannerPage extends StatefulWidget {
 class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
   final TextEditingController _barcodeController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
-  List<Map<String, dynamic>> scanHistory = [];
+  List<Map<String, dynamic>> scanHistory =
+      []; // Faqat WebSocket orqali to'ldiriladi
   String lastScannedCode = '';
   bool isLoading = false;
+  bool showImages = true; // Rasmlarni ko'rsatish/yashirish uchun
+
+  // WebSocket ulanishi
+  WebSocketChannel? _channel;
+  bool isConnected = false;
+  String connectionStatus = 'Ulanish...';
 
   // Backend API URL
   final String apiUrl = 'http://localhost:3030/attendance/create';
+  final String baseImageUrl = 'http://localhost:3030/';
+  final String wsUrl = 'ws://localhost:7070/ws';
 
   @override
   void initState() {
@@ -31,13 +43,130 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
     });
+
+    // WebSocket ulanishini boshlash
+    _connectWebSocket();
   }
 
   @override
   void dispose() {
     _barcodeController.dispose();
     _focusNode.dispose();
+    _channel?.sink.close();
     super.dispose();
+  }
+
+  // WebSocket ulanishini o'rnatish
+  void _connectWebSocket() {
+    try {
+      _channel = IOWebSocketChannel.connect(wsUrl);
+
+      setState(() {
+        isConnected = true;
+        connectionStatus = 'Ulandi';
+      });
+
+      // WebSocket xabarlarini tinglash
+      _channel!.stream.listen(
+        (data) {
+          try {
+            final jsonData = json.decode(data);
+            _handleWebSocketMessage(jsonData);
+          } catch (e) {
+            print('WebSocket xabar parsing xatosi: $e');
+          }
+        },
+        onError: (error) {
+          setState(() {
+            isConnected = false;
+            connectionStatus = 'Ulanish xatosi';
+          });
+          print('WebSocket xatosi: $error');
+          // Qayta ulanishga harakat
+          Future.delayed(Duration(seconds: 5), () {
+            if (mounted) _connectWebSocket();
+          });
+        },
+        onDone: () {
+          setState(() {
+            isConnected = false;
+            connectionStatus = 'Ulanish uzildi';
+          });
+          // Qayta ulanishga harakat
+          Future.delayed(Duration(seconds: 3), () {
+            if (mounted) _connectWebSocket();
+          });
+        },
+      );
+    } catch (e) {
+      setState(() {
+        isConnected = false;
+        connectionStatus = 'Ulanish mumkin emas';
+      });
+      print('WebSocket ulanish xatosi: $e');
+      // Qayta ulanishga harakat
+      Future.delayed(Duration(seconds: 5), () {
+        if (mounted) _connectWebSocket();
+      });
+    }
+  }
+
+  // WebSocket xabarini qayta ishlash
+  void _handleWebSocketMessage(Map<String, dynamic> data) {
+    setState(() {
+      // Yangi ma'lumotni tarix boshiga qo'shish
+      scanHistory.insert(0, {
+        'qr_id': data['qr_id'] ?? '',
+        'status': data['status'] ?? 'entered',
+        'result': 'success',
+        'error': null,
+        'userData': {
+          'full_name': data['full_name'] ?? 'Noma\'lum foydalanuvchi',
+          'img_url': data['img_url'] ?? '',
+        },
+        'time': data['timestamp'] != null
+            ? DateTime.parse(data['timestamp']).toString().substring(11, 19)
+            : DateTime.now().toString().substring(11, 19),
+        'date': data['timestamp'] != null
+            ? DateTime.parse(data['timestamp']).toString().substring(0, 10)
+            : DateTime.now().toString().substring(0, 10),
+      });
+    });
+
+    // Real-time xabar ko'rsatish
+    _showRealTimeNotification(data);
+  }
+
+  // Real-time bildirishnoma
+  void _showRealTimeNotification(Map<String, dynamic> data) {
+    String status = data['status'] ?? 'entered';
+    String userName = data['full_name'] ?? 'Noma\'lum foydalanuvchi';
+    String message = status == 'entered'
+        ? '$userName ishga kirdi'
+        : '$userName ishdan chiqdi';
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              status == 'entered' ? Icons.login : Icons.logout,
+              color: Colors.white,
+            ),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                message,
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: status == 'entered' ? Colors.green : Colors.red,
+        duration: Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   // Barcode scan qilinganda ishlaydigan funksiya
@@ -70,77 +199,75 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
               color: Colors.blue[700],
             ),
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.qr_code_scanner,
-                size: 64,
-                color: Colors.blue[700],
-              ),
-              SizedBox(height: 16),
-              Text(
-                'QR Code: $qrId',
-                style: TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 16),
-              Text(
-                'Siz hozir nima qilmoqchisiz?',
-                style: TextStyle(fontSize: 16),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
           actions: [
             Row(
               children: [
                 Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      _sendAttendanceRequest(qrId, 'entered');
-                    },
-                    icon: Icon(Icons.login, color: Colors.white),
-                    label: Text('Ishga kirdim'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        _sendAttendanceRequest(qrId, 'entered');
+                      },
+                      child: Text(
+                        textAlign: TextAlign.center,
+                        'Ishga kirdim',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                 ),
                 SizedBox(width: 8),
                 Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      _sendAttendanceRequest(qrId, 'come_out');
-                    },
-                    icon: Icon(Icons.logout, color: Colors.white),
-                    label: Text('Ishdan chiqdim'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        _sendAttendanceRequest(qrId, 'come_out');
+                      },
+                      child: Text(
+                        textAlign: TextAlign.center,
+                        'Ishdan chiqdim',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ],
             ),
             SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  _focusNode.requestFocus();
-                },
-                child: Text('Bekor qilish'),
+            Center(
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: Text(
+                    textAlign: TextAlign.center,
+                    'Bekor qilish',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
               ),
             ),
           ],
@@ -166,9 +293,7 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
           'status': status,
         }),
       );
-      print(status);
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
+
       setState(() {
         isLoading = false;
       });
@@ -176,8 +301,18 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
       if (response.statusCode == 200 || response.statusCode == 201) {
         // Muvaffaqiyatli
         final responseData = json.decode(response.body);
-        _showSuccessMessage(status, qrId);
-        _addToHistory(qrId, status, 'success', null);
+
+        // Response dan user ma'lumotlarini olish
+        Map<String, dynamic>? userData;
+        if (responseData.containsKey('card')) {
+          userData = responseData['card'];
+        }
+
+        // User card dialogini ko'rsatish
+        _showUserCardDialog(status, userData);
+
+        // WebSocket orqali real-time ma'lumotlar keladi,
+        // shuning uchun qo'lda tarixga qo'shmaslik kerak
       } else {
         // Xatolik
         String errorMessage = 'Noma\'lum xatolik yuz berdi';
@@ -196,7 +331,6 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
         }
 
         _showErrorMessage(errorMessage);
-        _addToHistory(qrId, status, 'error', errorMessage);
       }
     } catch (e) {
       setState(() {
@@ -206,30 +340,128 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
       String errorMessage =
           'Server bilan bog\'lanishda xatolik: ${e.toString()}';
       _showErrorMessage(errorMessage);
-      _addToHistory(qrId, status, 'error', errorMessage);
     }
 
     _focusNode.requestFocus();
   }
 
-  // Muvaffaqiyat xabarini ko'rsatish
-  void _showSuccessMessage(String status, String qrId) {
+  // User card dialogini ko'rsatish
+  void _showUserCardDialog(String status, Map<String, dynamic>? userData) {
     String message = status == 'entered'
-        ? 'Ishga kirish muvaffaqiyatli qayd etildi!'
-        : 'Ishdan chiqish muvaffaqiyatli qayd etildi!';
+        ? 'Ishga kirish muvaffaqiyatli!'
+        : 'Ishdan chiqish muvaffaqiyatli!';
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.white),
-            SizedBox(width: 8),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 3),
-      ),
+    String userName = userData != null && userData['full_name'] != null
+        ? userData['full_name']
+        : 'Noma\'lum foydalanuvchi';
+
+    String userImage = userData != null && userData['img_url'] != null
+        ? userData['img_url']
+        : '';
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        // 2 soniyadan keyin avtomatik yopish
+        Future.delayed(Duration(seconds: 2), () {
+          if (Navigator.canPop(context)) {
+            Navigator.of(context).pop();
+          }
+        });
+
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            padding: EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: status == 'entered'
+                    ? [Colors.green.shade400, Colors.green.shade600]
+                    : [Colors.red.shade400, Colors.red.shade600],
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // User rasmi
+                Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 4),
+                    image: userImage.isNotEmpty
+                        ? DecorationImage(
+                            image: NetworkImage('$baseImageUrl$userImage'),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                    color: userImage.isEmpty ? Colors.grey[300] : null,
+                  ),
+                  child: userImage.isEmpty
+                      ? Icon(
+                          Icons.person,
+                          size: 60,
+                          color: Colors.grey[600],
+                        )
+                      : null,
+                ),
+
+                SizedBox(height: 20),
+
+                // Status icon
+                Icon(
+                  status == 'entered' ? Icons.login : Icons.logout,
+                  size: 40,
+                  color: Colors.white,
+                ),
+
+                SizedBox(height: 10),
+
+                // User ismi
+                Text(
+                  userName,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                SizedBox(height: 10),
+
+                // Status xabari
+                Text(
+                  message,
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.white,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                SizedBox(height: 15),
+
+                // Vaqt
+                Text(
+                  DateTime.now().toString().substring(11, 19),
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white70,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -260,19 +492,7 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
     );
   }
 
-  // Tarixga qo'shish
-  void _addToHistory(String qrId, String status, String result, String? error) {
-    setState(() {
-      scanHistory.insert(0, {
-        'qr_id': qrId,
-        'status': status,
-        'result': result,
-        'error': error,
-        'time': DateTime.now().toString().substring(11, 19),
-        'date': DateTime.now().toString().substring(0, 10),
-      });
-    });
-  }
+  // Tarix faqat WebSocket orqali to'ldiriladi, qo'lda qo'shish yo'q
 
   // Status uchun rang olish
   Color _getStatusColor(String status, String result) {
@@ -295,7 +515,39 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Davomat tizimi'),
+        title: Row(
+          children: [
+            Text('Davomat tizimi'),
+            Spacer(),
+            // WebSocket ulanish holati
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: isConnected ? Colors.green : Colors.red,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isConnected ? Icons.wifi : Icons.wifi_off,
+                    size: 16,
+                    color: Colors.white,
+                  ),
+                  SizedBox(width: 4),
+                  Text(
+                    connectionStatus,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
         backgroundColor: Colors.blue[700],
         elevation: 0,
         foregroundColor: Colors.white,
@@ -395,58 +647,6 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
 
                 SizedBox(height: 16),
 
-                // Last Scanned Code Display
-                if (lastScannedCode.isNotEmpty)
-                  Card(
-                    elevation: 4,
-                    color: Colors.green[50],
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.check_circle, color: Colors.green),
-                              SizedBox(width: 8),
-                              Text(
-                                'Oxirgi scan qilingan QR kod:',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.green[700],
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 8),
-                          Container(
-                            width: double.infinity,
-                            padding: EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.green[200]!),
-                            ),
-                            child: Text(
-                              lastScannedCode,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'monospace',
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                SizedBox(height: 16),
-
                 // Scan History
                 Expanded(
                   child: Card(
@@ -463,7 +663,7 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
                               Icon(Icons.history, color: Colors.blue[700]),
                               SizedBox(width: 8),
                               Text(
-                                'Davomat tarixi',
+                                'Real-time davomat tarixi',
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
@@ -471,100 +671,142 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
                                 ),
                               ),
                               Spacer(),
-                              if (scanHistory.isNotEmpty)
-                                TextButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      scanHistory.clear();
-                                      lastScannedCode = '';
-                                    });
-                                  },
-                                  child: Text('Tozalash'),
+                              // Rasmlarni ko'rsatish/yashirish tugmasi
+                              IconButton(
+                                onPressed: () {
+                                  setState(() {
+                                    showImages = !showImages;
+                                  });
+                                },
+                                icon: Icon(
+                                  showImages
+                                      ? Icons.visibility
+                                      : Icons.visibility_off,
+                                  color: Colors.blue[700],
                                 ),
+                                tooltip: showImages
+                                    ? 'Rasmlarni yashirish'
+                                    : 'Rasmlarni ko\'rsatish',
+                              ),
                             ],
                           ),
                         ),
                         Expanded(
-                          child: scanHistory.isEmpty
-                              ? Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.history,
-                                        size: 64,
-                                        color: Colors.grey[400],
-                                      ),
-                                      SizedBox(height: 16),
-                                      Text(
-                                        'Hali hech qanday faoliyat yo\'q',
-                                        style:
-                                            TextStyle(color: Colors.grey[600]),
-                                      ),
-                                    ],
-                                  ),
-                                )
-                              : ListView.builder(
-                                  itemCount: scanHistory.length,
-                                  itemBuilder: (context, index) {
-                                    final item = scanHistory[index];
-                                    final color = _getStatusColor(
-                                        item['status'], item['result']);
-                                    final icon = _getStatusIcon(
-                                        item['status'], item['result']);
-
-                                    return Card(
-                                      margin: EdgeInsets.symmetric(
-                                          horizontal: 16, vertical: 4),
-                                      child: ListTile(
-                                        leading: CircleAvatar(
-                                          backgroundColor:
-                                              color.withOpacity(0.2),
-                                          child: Icon(icon, color: color),
+                            child: scanHistory.isEmpty
+                                ? Center(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.wifi_tethering,
+                                          size: 64,
+                                          color: isConnected
+                                              ? Colors.green[400]
+                                              : Colors.grey[400],
                                         ),
-                                        title: Text(
-                                          item['result'] == 'error'
-                                              ? 'Xatolik - ${_getStatusText(item['status'])}'
-                                              : _getStatusText(item['status']),
+                                        SizedBox(height: 16),
+                                        Text(
+                                          isConnected
+                                              ? 'Real-time ma\'lumotlar kutilmoqda...'
+                                              : 'Server bilan aloqa yo\'q',
                                           style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: color,
-                                          ),
+                                              color: isConnected
+                                                  ? Colors.grey[600]
+                                                  : Colors.red[600]),
                                         ),
-                                        subtitle: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'QR: ${item['qr_id']}',
-                                              style: TextStyle(
-                                                fontFamily: 'monospace',
-                                                fontSize: 12,
-                                              ),
+                                      ],
+                                    ),
+                                  )
+                                : GridView.builder(
+                                    padding: EdgeInsets.all(8),
+                                    gridDelegate:
+                                        SliverGridDelegateWithMaxCrossAxisExtent(
+                                      maxCrossAxisExtent: 300,
+                                      mainAxisSpacing: 20,
+                                      crossAxisSpacing: 16,
+                                      childAspectRatio: 0.8,
+                                    ),
+                                    shrinkWrap: true,
+                                    physics: BouncingScrollPhysics(),
+                                    primary: false,
+                                    itemCount: scanHistory.length,
+                                    itemBuilder: (context, index) {
+                                      final item = scanHistory[index];
+
+                                      final userData = item['userData']
+                                          as Map<String, dynamic>?;
+                                      final isSuccess =
+                                          item['result'] == 'success';
+
+                                      // Status bo'yicha rang aniqlash
+                                      Color statusColor;
+                                      Color borderColor;
+                                      Color bgColor;
+
+                                      if (item['status'] == 'entered') {
+                                        statusColor = Colors.green.shade700;
+                                        borderColor = Colors.green.shade400;
+                                        bgColor = Colors.green.shade50;
+                                      } else if (item['status'] == 'come_out') {
+                                        statusColor = Colors.red.shade700;
+                                        borderColor = Colors.red.shade400;
+                                        bgColor = Colors.red.shade50;
+                                      } else {
+                                        statusColor = Colors.blue.shade700;
+                                        borderColor = Colors.blue.shade400;
+                                        bgColor = Colors.blue.shade50;
+                                      }
+
+                                      return Container(
+                                          decoration: BoxDecoration(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            border: Border.all(
+                                              color: borderColor,
+                                              width: 1,
                                             ),
-                                            Text(
-                                                '${item['date']} ${item['time']}'),
-                                            if (item['error'] != null)
-                                              Text(
-                                                'Xatolik: ${item['error']}',
-                                                style: TextStyle(
-                                                  color: Colors.red,
-                                                  fontSize: 12,
+                                            color: statusColor,
+                                          ),
+                                          child: Column(children: [
+                                            // Rasm qismi - yuqori yarmi
+                                            Expanded(
+                                              child: Container(
+                                                width: double.infinity,
+                                                decoration: BoxDecoration(
+                                                  image: showImages && isSuccess
+                                                      ? DecorationImage(
+                                                          image: NetworkImage(
+                                                              '$baseImageUrl${userData!['img_url']}'),
+                                                          fit: BoxFit.cover,
+                                                        )
+                                                      : null,
+                                                  color: bgColor,
                                                 ),
                                               ),
-                                          ],
-                                        ),
-                                        trailing: Icon(
-                                          item['result'] == 'success'
-                                              ? Icons.check_circle
-                                              : Icons.error,
-                                          color: color,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                        ),
+                                            ),
+
+                                            Text(
+                                              userData?["full_name"] ?? "",
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 20),
+                                            ),
+                                            Text(
+                                              '${item['time']}',
+                                              style: TextStyle(
+                                                fontSize: 20,
+                                                color: Colors.white,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ]));
+                                    },
+                                  ))
                       ],
                     ),
                   ),
@@ -576,11 +818,14 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
+          if (!isConnected) {
+            _connectWebSocket();
+          }
           _focusNode.requestFocus();
         },
-        child: Icon(Icons.center_focus_strong),
-        tooltip: 'Input ga fokus berish',
-        backgroundColor: Colors.blue[700],
+        child: Icon(isConnected ? Icons.center_focus_strong : Icons.refresh),
+        tooltip: isConnected ? 'Input ga fokus berish' : 'Qayta ulanish',
+        backgroundColor: isConnected ? Colors.blue[700] : Colors.orange[700],
         foregroundColor: Colors.white,
       ),
     );
