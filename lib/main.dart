@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:sarpo_uz/admin/create_user.dart';
 import 'package:sarpo_uz/core/di/di.dart';
+import 'package:sarpo_uz/dio.dart';
 import 'package:sarpo_uz/ui/login.dart';
 import 'package:sarpo_uz/ui/qr-code.dart';
+import 'package:sarpo_uz/user/ui/qr_code_genered.dart';
 import 'package:sarpo_uz/user/ui/user_home_page.dart';
 
 void main() async {
@@ -25,13 +27,42 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: UserHomePage(),
-    );
+        debugShowCheckedModeBanner: false,
+        title: 'Flutter Demo',
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+          useMaterial3: true,
+        ),
+        home: Scaffold(
+            body: ListView.builder(
+          itemBuilder: (context, index) {
+            List<String> title = [
+              'User Home Page',
+              'Admin Panel',
+              'Login Page',
+              'QR Code Generated',
+              'Barcode Scanner',
+              "Ask Page"
+            ];
+            List<Widget> items = [
+              const UserHomePage(),
+              AdminPanel(),
+              const LoginPage(),
+              const QRCodePageGenerd(),
+              BarcodeScannerPage(),
+              AskPage()
+            ];
+            return ListTile(
+              title: Text(title[index % title.length]),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => items[index % items.length],
+                ),
+              ),
+            );
+          },
+          itemCount: 6,
+        )));
   }
 }

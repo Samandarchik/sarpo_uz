@@ -38,7 +38,7 @@ class _UserHomePageState extends State<UserHomePage>
 
   Future<List<AttendanceInfo>> fetchAttendance() async {
     final uri = Uri.parse(
-        'http://localhost:3030/attendance/get?id=2&fromDate=2025-07-01&toDate=2025-08-01');
+        'http://localhost:3030/attendance/get?id=1&fromDate=2025-07-01&toDate=2025-08-05');
     final response = await http.get(uri);
 
     if (response.statusCode == 200) {
