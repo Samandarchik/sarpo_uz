@@ -4,6 +4,10 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Rasmlaringizni tanlash uchun ruxsat kerak</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Kamera orqali rasm olish uchun ruxsat kerak</string>
 	<key>CFBundleDisplayName</key>
 	<string>Sarpo Uz</string>
 	<key>CFBundleExecutable</key>

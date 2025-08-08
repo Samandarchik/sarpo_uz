@@ -1,68 +1,64 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:sarpo_uz/admin/create_user.dart';
-import 'package:sarpo_uz/core/di/di.dart';
-import 'package:sarpo_uz/dio.dart';
-import 'package:sarpo_uz/ui/login.dart';
-import 'package:sarpo_uz/ui/qr-code.dart';
-import 'package:sarpo_uz/user/ui/qr_code_genered.dart';
-import 'package:sarpo_uz/user/ui/user_home_page.dart';
+import 'package:sarpo_uz/screens/users_list_screen.dart';
+import 'package:sarpo_uz/screens_user/user_home_page.dart';
+import 'package:sarpo_uz/services_user/login_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'utils/app_constants.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await setupInit();
-  runApp(ScreenUtilInit(
-    designSize: Size(375, 812),
-    minTextAdapt: true,
-    builder: (context, child) {
-      return const MyApp();
-    },
-  ));
+void main() {
+  runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  Widget _initialRoute = const Scaffold(
+      body: Center(
+          child: CircularProgressIndicator(
+    color: Colors.black,
+  )));
+
+  @override
+  void initState() {
+    super.initState();
+    _checkLoginStatus();
+  }
+
+  Future<void> _checkLoginStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(AppConstants.userTokenKey);
+    final role = prefs.getString(AppConstants.userRoleKey);
+
+    if (token != null && role == 'user') {
+      setState(() {
+        _initialRoute = const UserHomePage();
+      });
+    } else if (token != null && role == 'admin') {
+      setState(() {
+        _initialRoute = UsersListScreen();
+      });
+    } else {
+      setState(() {
+        _initialRoute = const LoginPage();
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'Flutter Demo',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-          useMaterial3: true,
-        ),
-        home: Scaffold(
-            body: ListView.builder(
-          itemBuilder: (context, index) {
-            List<String> title = [
-              'User Home Page',
-              'Admin Panel',
-              'Login Page',
-              'QR Code Generated',
-              'Barcode Scanner',
-              "Ask Page"
-            ];
-            List<Widget> items = [
-              const UserHomePage(),
-              AdminPanel(),
-              const LoginPage(),
-              const QRCodePageGenerd(),
-              BarcodeScannerPage(),
-              AskPage()
-            ];
-            return ListTile(
-              title: Text(title[index % title.length]),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => items[index % items.length],
-                ),
-              ),
-            );
-          },
-          itemCount: 6,
-        )));
+      debugShowCheckedModeBanner: false,
+      title: 'Uzjoylar CRM',
+      theme: ThemeData(
+        primarySwatch: Colors.red,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
+      ),
+      home: UsersListScreen(),
+    );
   }
 }
