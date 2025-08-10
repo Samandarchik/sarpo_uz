@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/salary.dart';
+import '../admin/models/salary.dart';
 import '../services/api_service.dart';
 
 class SalaryUpdateDialog extends StatefulWidget {

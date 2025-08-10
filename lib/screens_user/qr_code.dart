@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:sarpo_uz/services_user/api_service.dart';
+import '../services_user/api_service.dart';
 
 class QrCodePage extends StatelessWidget {
   final String userToken;
 
-  const QrCodePage({Key? key, required this.userToken}) : super(key: key);
+  const QrCodePage({super.key, required this.userToken});
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +28,7 @@ class QrCodePage extends StatelessWidget {
                   QrImageView(
                     data: snapshot.data!,
                     version: QrVersions.auto,
-                    size: 200.0,
+                    size: 230.0,
                     gapless: false,
                     errorStateBuilder: (cxt, err) {
                       return const Center(
@@ -40,6 +40,7 @@ class QrCodePage extends StatelessWidget {
                     },
                   ),
                   const SizedBox(height: 16),
+                  Text('QR ID: ${snapshot.data}'),
                 ],
               );
             } else {

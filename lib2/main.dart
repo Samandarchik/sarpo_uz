@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'admin/create_user.dart';
-import 'core/di/di.dart';
 import 'dio.dart';
 import 'ui/login.dart';
 import 'ui/qr-code.dart';
@@ -10,7 +8,6 @@ import 'user/ui/user_home_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await setupInit();
   runApp(ScreenUtilInit(
     designSize: Size(375, 812),
     minTextAdapt: true,
@@ -38,7 +35,6 @@ class MyApp extends StatelessWidget {
           itemBuilder: (context, index) {
             List<String> title = [
               'User Home Page',
-              'Admin Panel',
               'Login Page',
               'QR Code Generated',
               'Barcode Scanner',
@@ -46,7 +42,6 @@ class MyApp extends StatelessWidget {
             ];
             List<Widget> items = [
               const UserHomePage(),
-              AdminPanel(),
               const LoginPage(),
               const QRCodePageGenerd(),
               BarcodeScannerPage(),

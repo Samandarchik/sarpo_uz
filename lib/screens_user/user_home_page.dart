@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:qr_flutter/qr_flutter.dart';
-import 'package:sarpo_uz/model_user/salary.dart';
-import 'package:sarpo_uz/screens_user/qr_code.dart';
-import 'package:sarpo_uz/services_user/api_service.dart';
-import 'package:sarpo_uz/services_user/login_page.dart';
+import '../model_user/salary.dart';
+import 'qr_code.dart';
+import '../services_user/api_service.dart';
+import '../services_user/login_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/app_constants.dart';
 import '../utils/date_utils.dart';
-import '../models/attendance.dart';
+import '../admin/models/attendance.dart';
 
 class UserHomePage extends StatefulWidget {
   const UserHomePage({super.key});
@@ -250,7 +249,7 @@ class _UserHomePageState extends State<UserHomePage>
                                       ? Icons.login
                                       : Icons.logout,
                                   color: attendance.status == 'entered'
-                                      ? Colors.green
+                                      ? Colors.black
                                       : Colors.red,
                                 ),
                               );

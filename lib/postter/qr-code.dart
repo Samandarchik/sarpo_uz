@@ -1,15 +1,12 @@
-// pubspec.yaml ga qo'shish kerak:
-// dependencies:
-//   flutter:
-//     sdk: flutter
-//   http: ^1.1.0  # HTTP requests uchun
-//   web_socket_channel: ^2.4.0  # WebSocket uchun
-
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:sarpo_uz/services_user/api_service.dart';
+import 'package:sarpo_uz/services_user/login_page.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/io.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'dart:convert';
 
 class BarcodeScannerPage extends StatefulWidget {
@@ -20,11 +17,14 @@ class BarcodeScannerPage extends StatefulWidget {
 class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
   final TextEditingController _barcodeController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
-  List<Map<String, dynamic>> scanHistory =
-      []; // Faqat WebSocket orqali to'ldiriladi
+  List<Map<String, dynamic>> scanHistory = [];
   String lastScannedCode = '';
   bool isLoading = false;
-  bool showImages = true; // Rasmlarni ko'rsatish/yashirish uchun
+  bool showImages = true;
+  bool isScanning = false; // Kamera holati
+
+  // Mobile Scanner
+  MobileScannerController cameraController = MobileScannerController();
 
   // WebSocket ulanishi
   WebSocketChannel? _channel;
@@ -39,12 +39,9 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
   @override
   void initState() {
     super.initState();
-    // Sahifa ochildigida input ga fokus berish
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
     });
-
-    // WebSocket ulanishini boshlash
     _connectWebSocket();
   }
 
@@ -53,7 +50,117 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
     _barcodeController.dispose();
     _focusNode.dispose();
     _channel?.sink.close();
+    cameraController.dispose();
     super.dispose();
+  }
+
+  // QR kamera ni ishga tushirish
+  void _startQRScanner() {
+    setState(() {
+      isScanning = true;
+    });
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Text(
+                    'QR Kod Skaneri',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red[700],
+                    ),
+                  ),
+                  Spacer(),
+                  IconButton(
+                    onPressed: () {
+                      _stopQRScanner();
+                      Navigator.pop(context);
+                    },
+                    icon: Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            // QR Scanner
+            Expanded(
+              child: Container(
+                margin: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.red[700]!, width: 2),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: MobileScanner(
+                    controller: cameraController,
+                    onDetect: (capture) {
+                      final List<Barcode> barcodes = capture.barcodes;
+                      for (final barcode in barcodes) {
+                        if (barcode.rawValue != null &&
+                            barcode.rawValue!.isNotEmpty) {
+                          // QR kod topildi
+                          Navigator.pop(context); // Bottom sheet ni yopish
+                          _stopQRScanner();
+
+                          // Scan qilingan kod bilan ishlash
+                          _onBarcodeScanned(barcode.rawValue!);
+                          break;
+                        }
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ),
+            // Footer
+            Container(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.qr_code_scanner,
+                    size: 32,
+                    color: Colors.red[700],
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'QR kodni kamera ko\'rinishiga joylashtiring',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // QR scanner ni to'xtatish
+  void _stopQRScanner() {
+    setState(() {
+      isScanning = false;
+    });
+    cameraController.stop();
   }
 
   // WebSocket ulanishini o'rnatish
@@ -66,7 +173,6 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
         connectionStatus = 'Ulandi';
       });
 
-      // WebSocket xabarlarini tinglash
       _channel!.stream.listen(
         (data) {
           try {
@@ -82,7 +188,6 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
             connectionStatus = 'Ulanish xatosi';
           });
           print('WebSocket xatosi: $error');
-          // Qayta ulanishga harakat
           Future.delayed(Duration(seconds: 5), () {
             if (mounted) _connectWebSocket();
           });
@@ -92,7 +197,6 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
             isConnected = false;
             connectionStatus = 'Ulanish uzildi';
           });
-          // Qayta ulanishga harakat
           Future.delayed(Duration(seconds: 3), () {
             if (mounted) _connectWebSocket();
           });
@@ -104,7 +208,6 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
         connectionStatus = 'Ulanish mumkin emas';
       });
       print('WebSocket ulanish xatosi: $e');
-      // Qayta ulanishga harakat
       Future.delayed(Duration(seconds: 5), () {
         if (mounted) _connectWebSocket();
       });
@@ -114,7 +217,6 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
   // WebSocket xabarini qayta ishlash
   void _handleWebSocketMessage(Map<String, dynamic> data) {
     setState(() {
-      // Yangi ma'lumotni tarix boshiga qo'shish
       scanHistory.insert(0, {
         'qr_id': data['qr_id'] ?? '',
         'status': data['status'] ?? 'entered',
@@ -133,7 +235,6 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
       });
     });
 
-    // Real-time xabar ko'rsatish
     _showRealTimeNotification(data);
   }
 
@@ -177,10 +278,8 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
       lastScannedCode = barcode;
     });
 
-    // Status ni so'rash
     _showStatusDialog(barcode);
 
-    // Input ni tozalash va yana fokus berish
     _barcodeController.clear();
     _focusNode.requestFocus();
   }
@@ -299,22 +398,15 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
       });
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // Muvaffaqiyatli
         final responseData = json.decode(response.body);
 
-        // Response dan user ma'lumotlarini olish
         Map<String, dynamic>? userData;
         if (responseData.containsKey('card')) {
           userData = responseData['card'];
         }
 
-        // User card dialogini ko'rsatish
         _showUserCardDialog(status, userData);
-
-        // WebSocket orqali real-time ma'lumotlar keladi,
-        // shuning uchun qo'lda tarixga qo'shmaslik kerak
       } else {
-        // Xatolik
         String errorMessage = 'Noma\'lum xatolik yuz berdi';
 
         try {
@@ -363,7 +455,6 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        // 2 soniyadan keyin avtomatik yopish
         Future.delayed(Duration(seconds: 2), () {
           if (Navigator.canPop(context)) {
             Navigator.of(context).pop();
@@ -378,47 +469,54 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
             padding: EdgeInsets.all(20),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
-             
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: status == 'entered'
+                    ? [Colors.green.shade400, Colors.green.shade600]
+                    : [Colors.red.shade400, Colors.red.shade600],
+              ),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // User rasmi
-                Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 4),
-                    image: userImage.isNotEmpty
-                        ? DecorationImage(
-                            image: NetworkImage('$baseImageUrl$userImage'),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
-                    color: userImage.isEmpty ? Colors.grey[300] : null,
-                  ),
-                  child: userImage.isEmpty
-                      ? Icon(
-                          Icons.person,
-                          size: 60,
-                          color: Colors.grey[600],
-                        )
-                      : null,
+                CachedNetworkImage(
+                  imageUrl: '$baseImageUrl$userImage',
+                  placeholder: (context, url) =>
+                      const CircularProgressIndicator(),
+                  errorWidget: (context, url, error) => const Icon(Icons.error),
                 ),
+                // Container(
+                //   width: 120,
+                //   height: 120,
+                //   decoration: BoxDecoration(
+                //     shape: BoxShape.circle,
+                //     border: Border.all(color: Colors.white, width: 4),
+                //     image: userImage.isNotEmpty
+                //         // 'https://crm.uzjoylar.uz/$_imageUrl',
 
+                //         ? DecorationImage(
+                //             image: NetworkImage('$baseImageUrl$userImage'),
+                //             fit: BoxFit.cover,
+                //           )
+                //         : null,
+                //     color: userImage.isEmpty ? Colors.grey[300] : null,
+                //   ),
+                //   child: userImage.isEmpty
+                //       ? Icon(
+                //           Icons.person,
+                //           size: 60,
+                //           color: Colors.grey[600],
+                //         )
+                //       : null,
+                // ),
                 SizedBox(height: 20),
-
-                // Status icon
                 Icon(
                   status == 'entered' ? Icons.login : Icons.logout,
                   size: 40,
                   color: Colors.white,
                 ),
-
                 SizedBox(height: 10),
-
-                // User ismi
                 Text(
                   userName,
                   style: TextStyle(
@@ -428,10 +526,7 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-
                 SizedBox(height: 10),
-
-                // Status xabari
                 Text(
                   message,
                   style: TextStyle(
@@ -440,10 +535,7 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-
                 SizedBox(height: 15),
-
-                // Vaqt
                 Text(
                   DateTime.now().toString().substring(11, 19),
                   style: TextStyle(
@@ -486,38 +578,31 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
     );
   }
 
-  // Tarix faqat WebSocket orqali to'ldiriladi, qo'lda qo'shish yo'q
-
-  // Status uchun rang olish
-  Color _getStatusColor(String status, String result) {
-    if (result == 'error') return Colors.red;
-    return status == 'entered' ? Colors.green : Colors.red;
-  }
-
-  // Status uchun icon olish
-  IconData _getStatusIcon(String status, String result) {
-    if (result == 'error') return Icons.error;
-    return status == 'entered' ? Icons.login : Icons.logout;
-  }
-
-  // Status uchun text olish
-  String _getStatusText(String status) {
-    return status == 'entered' ? 'Ishga kirdi' : 'Ishdan chiqdi';
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        actions: [
+          IconButton(
+            icon: Icon(Icons.logout, color: Colors.white),
+            onPressed: () async {
+              await ApiService.logout();
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => const LoginPage()),
+                (Route<dynamic> route) => false,
+              );
+            },
+          ),
+        ],
         title: Row(
           children: [
             Text('Davomat tizimi'),
             Spacer(),
-            // WebSocket ulanish holati
             Container(
               padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: isConnected ? Colors.green : Colors.red,
+                color: isConnected ? Colors.black : Colors.red,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -547,13 +632,7 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
         foregroundColor: Colors.white,
       ),
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.red[700]!, Colors.red[50]!],
-          ),
-        ),
+        decoration: BoxDecoration(color: Colors.red[700]),
         child: SafeArea(
           child: Padding(
             padding: EdgeInsets.all(16.0),
@@ -591,7 +670,13 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
                           focusNode: _focusNode,
                           autofocus: true,
                           enabled: !isLoading,
+                          cursorColor: Colors.black,
                           decoration: InputDecoration(
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide:
+                                  BorderSide(color: Colors.red[700]!, width: 3),
+                            ),
                             hintText: 'QR kodni shu yerga scan qiling...',
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
@@ -625,7 +710,7 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
                         Text(
                           isLoading
                               ? 'Ma\'lumot yuborilmoqda...'
-                              : 'QR kodni skanerini bu input ga yo\'naltiring',
+                              : 'QR kodni skanerini bu input ga yo\'naltiring yoki kamera tugmasini bosing',
                           style: TextStyle(
                             color: isLoading
                                 ? Colors.orange[600]
@@ -664,7 +749,6 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
                                 ),
                               ),
                               Spacer(),
-                              // Rasmlarni ko'rsatish/yashirish tugmasi
                               IconButton(
                                 onPressed: () {
                                   setState(() {
@@ -732,7 +816,6 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
                                       final isSuccess =
                                           item['result'] == 'success';
 
-                                      // Status bo'yicha rang aniqlash
                                       Color statusColor;
                                       Color borderColor;
                                       Color bgColor;
@@ -762,7 +845,6 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
                                             color: statusColor,
                                           ),
                                           child: Column(children: [
-                                            // Rasm qismi - yuqori yarmi
                                             Expanded(
                                               child: Container(
                                                 width: double.infinity,
@@ -778,7 +860,6 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
                                                 ),
                                               ),
                                             ),
-
                                             Text(
                                               userData?["full_name"] ?? "",
                                               textAlign: TextAlign.center,
@@ -813,13 +894,16 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
         onPressed: () {
           if (!isConnected) {
             _connectWebSocket();
+          } else {
+            // Kamera QR skanerni ochish
+            _startQRScanner();
           }
-          _focusNode.requestFocus();
         },
-        child: Icon(isConnected ? Icons.center_focus_strong : Icons.refresh),
-        tooltip: isConnected ? 'Input ga fokus berish' : 'Qayta ulanish',
+        tooltip:
+            isConnected ? 'QR kodni kamera bilan skanlash' : 'Qayta ulanish',
         backgroundColor: isConnected ? Colors.red[700] : Colors.orange[700],
         foregroundColor: Colors.white,
+        child: Icon(isConnected ? Icons.qr_code_scanner : Icons.refresh),
       ),
     );
   }

@@ -1,9 +1,10 @@
 import 'dart:io';
 import 'dart:math';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/user.dart';
-import '../services/api_service.dart';
+import '../../services/api_service.dart';
 
 class AddEditUserScreen extends StatefulWidget {
   final User? user;
@@ -145,8 +146,8 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
                 child: GestureDetector(
                   onTap: _pickImage,
                   child: Container(
-                    width: 120,
-                    height: 120,
+                    width: 150,
+                    height: 150,
                     decoration: BoxDecoration(
                       color: Colors.grey[300],
                       borderRadius: BorderRadius.circular(60),
@@ -160,12 +161,20 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
                         : _imageUrl != null && _imageUrl!.isNotEmpty
                             ? ClipRRect(
                                 borderRadius: BorderRadius.circular(60),
-                                child: Image.network(
-                                  'https://crm.uzjoylar.uz/$_imageUrl',
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) =>
-                                      Icon(Icons.person, size: 60),
+                                child: CachedNetworkImage(
+                                  imageUrl:
+                                      'https://crm.uzjoylar.uz/$_imageUrl',
+                                  placeholder: (context, url) =>
+                                      const CircularProgressIndicator(),
+                                  errorWidget: (context, url, error) =>
+                                      const Icon(Icons.error),
                                 ),
+                                // child: Image.network(
+
+                                //   fit: BoxFit.cover,
+                                //   errorBuilder: (_, __, ___) =>
+                                //       Icon(Icons.person, size: 60),
+                                // ),
                               )
                             : Icon(Icons.add_a_photo, size: 60),
                   ),

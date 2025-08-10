@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:sarpo_uz/screens_user/user_home_page.dart';
-import 'package:sarpo_uz/services_user/api_service.dart';
+import 'package:sarpo_uz/admin/screens/users_list_screen.dart';
+import 'package:sarpo_uz/postter/qr-code.dart';
+import '../screens_user/user_home_page.dart';
+import 'api_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -37,6 +39,16 @@ class _LoginPageState extends State<LoginPage> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const UserHomePage()),
+        );
+      } else if (response.userInfo.role == 'admin') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => UsersListScreen()),
+        );
+      } else if (response.userInfo.role == 'qr') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => BarcodeScannerPage()),
         );
       } else {
         setState(() {

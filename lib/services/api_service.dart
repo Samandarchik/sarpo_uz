@@ -4,9 +4,9 @@ import 'package:image/image.dart' as img;
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:sarpo_uz/models/attendance.dart';
-import '../models/user.dart';
-import '../models/salary.dart';
+import '../admin/models/attendance.dart';
+import '../admin/models/user.dart';
+import '../admin/models/salary.dart';
 
 class ApiService {
   static const String baseUrl = 'https://crm.uzjoylar.uz';

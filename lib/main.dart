@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:sarpo_uz/screens/users_list_screen.dart';
-import 'package:sarpo_uz/screens_user/user_home_page.dart';
-import 'package:sarpo_uz/services_user/login_page.dart';
+import 'package:sarpo_uz/postter/qr-code.dart';
+
+import 'admin/screens/users_list_screen.dart';
+import 'screens_user/user_home_page.dart';
+import 'services_user/login_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'utils/app_constants.dart';
 
@@ -17,7 +19,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  Widget _initialRoute = const Scaffold(
+  Widget initialRoute = const Scaffold(
       body: Center(
           child: CircularProgressIndicator(
     color: Colors.black,
@@ -35,16 +37,27 @@ class _MyAppState extends State<MyApp> {
     final role = prefs.getString(AppConstants.userRoleKey);
 
     if (token != null && role == 'user') {
+      print('User is logged in with role: $role');
       setState(() {
-        _initialRoute = const UserHomePage();
+        initialRoute = const UserHomePage();
       });
     } else if (token != null && role == 'admin') {
+      print('User is logged in with role: $role');
+
       setState(() {
-        _initialRoute = UsersListScreen();
+        initialRoute = UsersListScreen();
+      });
+    } else if (token != null && role == 'qr') {
+      print('User is logged in with role: $role');
+
+      setState(() {
+        initialRoute = BarcodeScannerPage();
       });
     } else {
+      print('User is logged in with role: $role');
+
       setState(() {
-        _initialRoute = const LoginPage();
+        initialRoute = const LoginPage();
       });
     }
   }
@@ -58,7 +71,7 @@ class _MyAppState extends State<MyApp> {
         primarySwatch: Colors.red,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: UsersListScreen(),
+      home: initialRoute, // UserHomePage(), // LoginPage(),
     );
   }
 }

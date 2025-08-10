@@ -1,11 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:sarpo_uz/model_user/salary.dart';
-import 'package:sarpo_uz/model_user/user.dart';
+import '../model_user/salary.dart';
+import '../model_user/user.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/user.dart';
-import '../models/attendance.dart';
-import '../models/salary.dart';
+import '../admin/models/attendance.dart';
 import '../utils/app_constants.dart';
 
 class ApiService {
@@ -94,8 +92,9 @@ class ApiService {
       );
 
       if (response.statusCode == 200) {
-        // Assuming the response body is the QR code string or URL
-        return response.body;
+        final jsonResponse = jsonDecode(response.body);
+        // Backend javobida 'qr_id' bo‘lishi kerak
+        return jsonResponse['qr_id']?.toString();
       } else {
         print(
             'QR Code request failed: ${response.statusCode} ${response.body}');

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:sarpo_uz/services_user/login_page.dart';
+import 'package:sarpo_uz/utils/app_constants.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
-import '../services/api_service.dart';
+import '../../services/api_service.dart';
 import 'add_edit_user_screen.dart';
-import '../widgets/salary_update_dialog.dart';
+import '../../widgets/salary_update_dialog.dart';
 import 'attendance_screen.dart';
 
 class UsersListScreen extends StatefulWidget {
@@ -18,6 +21,15 @@ class _UsersListScreenState extends State<UsersListScreen> {
   void initState() {
     super.initState();
     loadUsers();
+  }
+
+  static Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(AppConstants.userTokenKey);
+    await prefs.remove(AppConstants.userIdKey);
+    await prefs.remove(AppConstants.userFullNameKey);
+    await prefs.remove(AppConstants.userImgUrlKey);
+    await prefs.remove(AppConstants.userRoleKey);
   }
 
   Future<void> loadUsers() async {
@@ -44,6 +56,23 @@ class _UsersListScreenState extends State<UsersListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        actions: [
+          IconButton(
+            icon: Icon(Icons.refresh),
+            onPressed: loadUsers,
+          ),
+          IconButton(
+            icon: Icon(Icons.logout, color: Colors.white),
+            onPressed: () async {
+              await logout();
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => const LoginPage()),
+                (Route<dynamic> route) => false,
+              );
+            },
+          ),
+        ],
         title: Text('Foydalanuvchilar'),
         backgroundColor: Colors.red,
         foregroundColor: Colors.white,
@@ -63,6 +92,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
                     margin: EdgeInsets.all(8),
                     child: ListTile(
                       leading: CircleAvatar(
+                        radius: 30,
                         backgroundImage: NetworkImage(
                             'https://crm.uzjoylar.uz/${user.imgUrl}'),
                         onBackgroundImageError: (_, __) {},
@@ -74,7 +104,6 @@ class _UsersListScreenState extends State<UsersListScreen> {
                         children: [
                           Text('Tel: ${user.phoneNumber}'),
                           Text('userId: ${user.id}'),
-                          Text('userId: ${user.salary ?? 'Maosh nomalum'}'),
                         ],
                       ),
                       onTap: () {
