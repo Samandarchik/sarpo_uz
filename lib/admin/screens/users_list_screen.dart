@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:sarpo_uz/admin/screens/local.dart';
 import 'package:sarpo_uz/user/services_user/login_page.dart';
@@ -6,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
 import 'add_edit_user_screen.dart';
-import '../../widgets/salary_update_dialog.dart';
+
 import 'attendance_screen.dart';
 
 class AdminUserListPage extends StatefulWidget {
@@ -87,15 +88,22 @@ class AdminUserListPageState extends State<AdminUserListPage> {
                 itemCount: users.length,
                 itemBuilder: (context, index) {
                   final user = users[index];
+                  print("imageUrl ${user.imgUrl}");
                   return Card(
                     margin: EdgeInsets.all(8),
                     child: ListTile(
-                      leading: CircleAvatar(
-                        radius: 30,
-                        backgroundImage: NetworkImage(
-                            'https://crm.uzjoylar.uz/${user.imgUrl}'),
-                        onBackgroundImageError: (_, __) {},
-                        child: user.imgUrl.isEmpty ? Icon(Icons.person) : null,
+                      leading: ClipOval(
+                        child: CachedNetworkImage(
+                          imageUrl: 'https://crm.uzjoylar.uz/${user.imgUrl}',
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.cover,
+                          errorWidget: (context, url, error) => const Icon(
+                            Icons.person,
+                            color: Colors.black,
+                            size: 24,
+                          ),
+                        ),
                       ),
                       title: Text(user.fullName),
                       subtitle: Column(
@@ -128,7 +136,7 @@ class AdminUserListPageState extends State<AdminUserListPage> {
                               ).then((_) => loadUsers()),
                           icon: Icon(
                             Icons.info,
-                            color: Colors.black,
+                            color: Colors.red,
                           )),
                     ),
                   );

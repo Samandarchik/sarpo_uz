@@ -34,7 +34,7 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
   // Backend API URL
   final String apiUrl = 'https://crm.uzjoylar.uz/attendance/create';
   final String baseImageUrl = 'https://crm.uzjoylar.uz/';
-  final String wsUrl = 'ws://31.187.74.228:7070/ws';
+  final String wsUrl = 'wss://websocket.uzjoylar.uz/ws';
 
   @override
   void initState() {

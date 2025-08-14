@@ -526,8 +526,8 @@ class _UserHomePageState extends State<UserHomePage>
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildPriceInfo("Umumiy", _salaryData!.salary),
-                _buildPriceInfo("Qolgan", _salaryData!.netSalary),
+                _buildPriceInfo("Umumiy", _salaryData!.netSalary),
+                _buildPriceInfo("Qolgan", _salaryData!.salary),
                 _buildPriceInfo("Kunlik", _salaryData!.oneDaySalary),
               ],
             ),
@@ -574,11 +574,8 @@ class _UserHomePageState extends State<UserHomePage>
                         ],
                       ),
                       const Divider(color: Colors.grey),
-                      _buildSalaryRow(
-                          'Umumiy summa',
-                          priceFormat(salary.amount!),
-                          Colors.black87,
-                          FontWeight.bold),
+                      _buildSalaryRow('Ish haqqi', priceFormat(salary.amount!),
+                          Colors.black87, FontWeight.bold),
                       if (salary.advance! > 0)
                         _buildSalaryRow(
                           'Avans',
@@ -633,58 +630,32 @@ class _UserHomePageState extends State<UserHomePage>
     );
   }
 
-// Chiroyli maosh qatori
-  Widget _buildSalaryRow(
-    String label,
-    String value,
-    Color color, [
-    FontWeight? fontWeight,
-  ]) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+  // Maosh qatorini ko'rsatish
+  Widget _buildSalaryRow(String label, String value, Color color,
+      [FontWeight? fontWeight]) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Label badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(6),
-            ),
+          SizedBox(
+            width: 100,
             child: Text(
-              label,
+              '$label:',
               style: TextStyle(
-                color: color,
                 fontWeight: FontWeight.bold,
-                fontSize: 13,
+                fontSize: 14,
               ),
             ),
           ),
-          const SizedBox(width: 10),
-
-          // Value
           Expanded(
             child: Text(
               value,
               style: TextStyle(
                 color: color,
-                fontWeight: fontWeight ?? FontWeight.w600,
+                fontWeight: FontWeight.bold,
                 fontSize: 14,
               ),
-              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
