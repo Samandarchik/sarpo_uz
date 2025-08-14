@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sarpo_uz/admin/screens/local.dart';
 import 'package:sarpo_uz/user/services_user/login_page.dart';
 import 'package:sarpo_uz/utils/app_constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -117,88 +118,18 @@ class AdminUserListPageState extends State<AdminUserListPage> {
                           ),
                         );
                       },
-                      trailing: PopupMenuButton(
-                        itemBuilder: (context) => [
-                          PopupMenuItem(
-                            value: 'edit',
-                            child: Row(
-                              children: [
-                                Icon(Icons.edit),
-                                SizedBox(width: 8),
-                                Text('Tahrirlash'),
-                              ],
-                            ),
-                          ),
-                          PopupMenuItem(
-                            value: 'salary',
-                            child: Row(
-                              children: [
-                                Icon(Icons.attach_money),
-                                SizedBox(width: 8),
-                                Text('Maosh'),
-                              ],
-                            ),
-                          ),
-                          PopupMenuItem(
-                            value: 'delete',
-                            child: Row(
-                              children: [
-                                Icon(Icons.delete, color: Colors.red),
-                                SizedBox(width: 8),
-                                Text('O\'chirish',
-                                    style: TextStyle(color: Colors.red)),
-                              ],
-                            ),
-                          ),
-                        ],
-                        onSelected: (value) {
-                          switch (value) {
-                            case 'edit':
-                              Navigator.push(
+                      trailing: IconButton(
+                          onPressed: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) =>
                                       AddEditUserScreen(user: user),
                                 ),
-                              ).then((_) => loadUsers());
-                              break;
-                            case 'salary':
-                              // Show salary dialog instead of navigating to separate screen
-                              showDialog(
-                                context: context,
-                                builder: (context) => SalaryUpdateDialog(
-                                  userId: user.id!,
-                                  userName: user.fullName,
-                                ),
-                              );
-                              break;
-                            case 'delete':
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: Text('Tasdiqlash'),
-                                  content:
-                                      Text('Haqiqatan ham o\'chirmoqchimisiz?'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      child: Text('Bekor qilish'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.pop(context);
-                                        deleteUser(user.id!);
-                                      },
-                                      child: Text('O\'chirish',
-                                          style: TextStyle(color: Colors.red)),
-                                    ),
-                                  ],
-                                ),
-                              );
-                              break;
-                          }
-                        },
-                      ),
+                              ).then((_) => loadUsers()),
+                          icon: Icon(
+                            Icons.info,
+                            color: Colors.black,
+                          )),
                     ),
                   );
                 },
@@ -216,30 +147,5 @@ class AdminUserListPageState extends State<AdminUserListPage> {
         foregroundColor: Colors.white,
       ),
     );
-  }
-}
-
-class TimeBasedButton extends StatelessWidget {
-  TimeBasedButton({super.key});
-
-  final DateTime now = DateTime.now();
-
-  bool isBetweenTime(int startHour, int endHour) {
-    print("Current time: ${now.hour}:${now.minute}");
-    print("Checking if between $startHour:00 and $endHour:00");
-    return now.hour >= startHour && now.hour < endHour;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return isBetweenTime(8, 10)
-        ? IconButton(
-            icon: const Icon(Icons.location_on, size: 30, color: Colors.white),
-            onPressed: () {
-              // Button bosilganda nima bo'lishini keyin yozasiz
-              debugPrint("Location button pressed");
-            },
-          )
-        : SizedBox();
   }
 }

@@ -43,6 +43,7 @@ class SalaryResponse {
   final String fullName;
   final int salary;
   final int oneDaySalary;
+  final int netSalary;
   final List<SalaryInfo> info;
 
   SalaryResponse({
@@ -50,6 +51,7 @@ class SalaryResponse {
     required this.salary,
     required this.oneDaySalary,
     required this.info,
+    this.netSalary = 0,
   });
 
   factory SalaryResponse.fromJson(Map<String, dynamic> json) {
@@ -57,6 +59,7 @@ class SalaryResponse {
       fullName: json['full_name'],
       salary: json['salary'],
       oneDaySalary: json['one_day_salary'],
+      netSalary: json['net_salary'] ?? 0,
       info: List<SalaryInfo>.from(
           json['info'].map((x) => SalaryInfo.fromJson(x))),
     );
