@@ -3,8 +3,8 @@ import 'package:http/http.dart' as http;
 import '../model_user/salary.dart';
 import '../model_user/user.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../admin/models/attendance.dart';
-import '../utils/app_constants.dart';
+import '../../admin/models/attendance.dart';
+import '../../utils/app_constants.dart';
 
 class ApiService {
   static Future<LoginResponse?> login(String login, String password) async {
@@ -107,7 +107,10 @@ class ApiService {
   }
 
   static Future<AttendanceResponse?> getAttendance(
-      int userId, String fromDate, String toDate, String token) async {
+    int userId,
+    String fromDate,
+    String toDate,
+  ) async {
     final url = Uri.parse(
         '${AppConstants.baseUrl}${AppConstants.attendanceEndpoint}?id=$userId&fromDate=$fromDate&toDate=$toDate');
     try {
@@ -115,7 +118,7 @@ class ApiService {
         url,
         headers: {
           'accept': 'application/json',
-          'Authorization': token,
+          // 'Authorization': token, tokenn
         },
       );
 
@@ -135,7 +138,12 @@ class ApiService {
   }
 
   static Future<SalaryResponse?> getSalary(
-      int userId, String fromDate, String toDate, String token) async {
+    int userId,
+    String fromDate,
+    String toDate,
+  ) async {
+    print(
+        'Fetching salary for userId: $userId, fromDate: $fromDate, toDate: $toDate');
     final url = Uri.parse(
         '${AppConstants.baseUrl}${AppConstants.salaryEndpoint}?id=$userId&fromDate=$fromDate&toDate=$toDate');
     try {
@@ -143,10 +151,10 @@ class ApiService {
         url,
         headers: {
           'accept': 'application/json',
-          'Authorization': token,
+          // 'Authorization': token,
         },
       );
-
+      print('Response status: ${response.statusCode}, body: ${response.body}');
       if (response.statusCode == 200) {
         final data = json.decode(utf8.decode(response.bodyBytes));
         return SalaryResponse.fromJson(data);

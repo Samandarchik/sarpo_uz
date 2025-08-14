@@ -1,4 +1,5 @@
 class Salary {
+  final int? id;
   final int? advance;
   final String? advanceDescription;
   final int? amount;
@@ -8,6 +9,7 @@ class Salary {
   final String? fineDescription;
 
   Salary({
+     this.id,
     this.advance,
     this.advanceDescription,
     this.amount,
@@ -19,15 +21,17 @@ class Salary {
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = {};
-    
+
     if (advance != null) data['advance'] = advance;
-    if (advanceDescription != null) data['advance_description'] = advanceDescription;
+    if (advanceDescription != null) {
+      data['advance_description'] = advanceDescription;
+    }
     if (amount != null) data['amount'] = amount;
     if (bonus != null) data['bonus'] = bonus;
     if (bonusDescription != null) data['bonus_description'] = bonusDescription;
     if (fine != null) data['fine'] = fine;
     if (fineDescription != null) data['fine_description'] = fineDescription;
-    
+
     return data;
   }
 }

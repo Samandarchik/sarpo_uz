@@ -2,8 +2,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import 'package:sarpo_uz/services_user/api_service.dart';
-import 'package:sarpo_uz/services_user/login_page.dart';
+import 'package:sarpo_uz/user/services_user/api_service.dart';
+import 'package:sarpo_uz/user/services_user/login_page.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -486,30 +486,6 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
                       const CircularProgressIndicator(),
                   errorWidget: (context, url, error) => const Icon(Icons.error),
                 ),
-                // Container(
-                //   width: 120,
-                //   height: 120,
-                //   decoration: BoxDecoration(
-                //     shape: BoxShape.circle,
-                //     border: Border.all(color: Colors.white, width: 4),
-                //     image: userImage.isNotEmpty
-                //         // 'https://crm.uzjoylar.uz/$_imageUrl',
-
-                //         ? DecorationImage(
-                //             image: NetworkImage('$baseImageUrl$userImage'),
-                //             fit: BoxFit.cover,
-                //           )
-                //         : null,
-                //     color: userImage.isEmpty ? Colors.grey[300] : null,
-                //   ),
-                //   child: userImage.isEmpty
-                //       ? Icon(
-                //           Icons.person,
-                //           size: 60,
-                //           color: Colors.grey[600],
-                //         )
-                //       : null,
-                // ),
                 SizedBox(height: 20),
                 Icon(
                   status == 'entered' ? Icons.login : Icons.logout,

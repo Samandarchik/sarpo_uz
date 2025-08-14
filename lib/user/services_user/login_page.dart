@@ -43,7 +43,7 @@ class _LoginPageState extends State<LoginPage> {
       } else if (response.userInfo.role == 'admin') {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => UsersListScreen()),
+          MaterialPageRoute(builder: (context) => AdminUserListPage()),
         );
       } else if (response.userInfo.role == 'qr') {
         Navigator.pushReplacement(

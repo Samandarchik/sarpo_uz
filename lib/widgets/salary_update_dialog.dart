@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../admin/models/salary.dart';
-import '../services/api_service.dart';
+import '../admin/services/api_service.dart';
 
 class SalaryUpdateDialog extends StatefulWidget {
   final int userId;

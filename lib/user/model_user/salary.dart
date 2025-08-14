@@ -1,26 +1,26 @@
 class SalaryInfo {
-  final int id;
-  final int amount;
-  final int advance;
+  final int? id;
+  final int? amount;
+  final int? advance;
   final String? advanceDescription;
-  final int fine;
+  final int? fine;
   final String? fineDescription;
-  final int bonus;
+  final int? bonus;
   final String? bonusDescription;
-  final String createdAt;
-  final String updatedAt;
+  final String? createdAt;
+  final String? updatedAt;
 
   SalaryInfo({
-    required this.id,
-    required this.amount,
-    required this.advance,
+    this.id,
+    this.amount,
+    this.advance,
     this.advanceDescription,
-    required this.fine,
+    this.fine,
     this.fineDescription,
-    required this.bonus,
+    this.bonus,
     this.bonusDescription,
-    required this.createdAt,
-    required this.updatedAt,
+    this.createdAt,
+    this.updatedAt,
   });
 
   factory SalaryInfo.fromJson(Map<String, dynamic> json) {
@@ -57,7 +57,8 @@ class SalaryResponse {
       fullName: json['full_name'],
       salary: json['salary'],
       oneDaySalary: json['one_day_salary'],
-      info: List<SalaryInfo>.from(json['info'].map((x) => SalaryInfo.fromJson(x))),
+      info: List<SalaryInfo>.from(
+          json['info'].map((x) => SalaryInfo.fromJson(x))),
     );
   }
 }

@@ -4,9 +4,9 @@ import 'qr_code.dart';
 import '../services_user/api_service.dart';
 import '../services_user/login_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../utils/app_constants.dart';
-import '../utils/date_utils.dart';
-import '../admin/models/attendance.dart';
+import '../../utils/app_constants.dart';
+import '../../utils/date_utils.dart';
+import '../../admin/models/attendance.dart';
 
 class UserHomePage extends StatefulWidget {
   const UserHomePage({super.key});
@@ -69,7 +69,7 @@ class _UserHomePageState extends State<UserHomePage>
         _currentMonth.month + 1, 0)); // Last day of the month
 
     final data =
-        await ApiService.getAttendance(_userId!, fromDate, toDate, userToken!);
+        await ApiService.getAttendance(_userId!, fromDate, toDate, );
     setState(() {
       _attendanceData = data;
       _isLoadingAttendance = false;
@@ -89,7 +89,7 @@ class _UserHomePageState extends State<UserHomePage>
         _currentMonth.month + 1, 0)); // Last day of the month
 
     final data =
-        await ApiService.getSalary(_userId!, fromDate, toDate, userToken!);
+        await ApiService.getSalary(_userId!, fromDate, toDate,);
     setState(() {
       _salaryData = data;
       _isLoadingSalary = false;
@@ -268,8 +268,9 @@ class _UserHomePageState extends State<UserHomePage>
                             itemCount: _salaryData!.info.length,
                             itemBuilder: (context, index) {
                               final salary = _salaryData!.info[index];
-                              final createdAtDate =
-                                  formatDateTimeToDDMMYYYY(salary.createdAt);
+                              final createdAtDate = formatDateTimeToDDMMYYYY(
+                                  salary.createdAt ??
+                                      DateTime.now().toString());
                               return Card(
                                 margin: const EdgeInsets.symmetric(
                                     horizontal: 16, vertical: 8),
@@ -284,13 +285,13 @@ class _UserHomePageState extends State<UserHomePage>
                                               fontWeight: FontWeight.bold)),
                                       const Divider(),
                                       Text('Umumiy summa: ${salary.amount}'),
-                                      if (salary.advance > 0)
+                                      if (salary.advance! > 0)
                                         Text(
                                             'Avans: ${salary.advance} (${salary.advanceDescription ?? 'N/A'})'),
-                                      if (salary.fine > 0)
+                                      if (salary.fine! > 0)
                                         Text(
                                             'Jarima: ${salary.fine} (${salary.fineDescription ?? 'N/A'})'),
-                                      if (salary.bonus > 0)
+                                      if (salary.bonus! > 0)
                                         Text(
                                             'Bonus: ${salary.bonus} (${salary.bonusDescription ?? 'N/A'})'),
                                     ],

@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:sarpo_uz/services_user/login_page.dart';
+import 'package:sarpo_uz/user/services_user/login_page.dart';
 import 'package:sarpo_uz/utils/app_constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
-import '../../services/api_service.dart';
+import '../services/api_service.dart';
 import 'add_edit_user_screen.dart';
 import '../../widgets/salary_update_dialog.dart';
 import 'attendance_screen.dart';
 
-class UsersListScreen extends StatefulWidget {
+class AdminUserListPage extends StatefulWidget {
+  const AdminUserListPage({super.key});
+
   @override
-  _UsersListScreenState createState() => _UsersListScreenState();
+  AdminUserListPageState createState() => AdminUserListPageState();
 }
 
-class _UsersListScreenState extends State<UsersListScreen> {
+class AdminUserListPageState extends State<AdminUserListPage> {
   List<User> users = [];
   bool isLoading = true;
-
   @override
   void initState() {
     super.initState();
@@ -57,10 +58,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
     return Scaffold(
       appBar: AppBar(
         actions: [
-          IconButton(
-            icon: Icon(Icons.refresh),
-            onPressed: loadUsers,
-          ),
+          TimeBasedButton(),
           IconButton(
             icon: Icon(Icons.logout, color: Colors.white),
             onPressed: () async {
@@ -111,9 +109,10 @@ class _UsersListScreenState extends State<UsersListScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => AttendanceScreen(
+                            builder: (context) => UserHomePage(
                               userId: user.id!,
                               userName: user.fullName,
+                              userImgUrl: user.imgUrl,
                             ),
                           ),
                         );
@@ -217,5 +216,30 @@ class _UsersListScreenState extends State<UsersListScreen> {
         foregroundColor: Colors.white,
       ),
     );
+  }
+}
+
+class TimeBasedButton extends StatelessWidget {
+  TimeBasedButton({super.key});
+
+  final DateTime now = DateTime.now();
+
+  bool isBetweenTime(int startHour, int endHour) {
+    print("Current time: ${now.hour}:${now.minute}");
+    print("Checking if between $startHour:00 and $endHour:00");
+    return now.hour >= startHour && now.hour < endHour;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return isBetweenTime(8, 10)
+        ? IconButton(
+            icon: const Icon(Icons.location_on, size: 30, color: Colors.white),
+            onPressed: () {
+              // Button bosilganda nima bo'lishini keyin yozasiz
+              debugPrint("Location button pressed");
+            },
+          )
+        : SizedBox();
   }
 }
