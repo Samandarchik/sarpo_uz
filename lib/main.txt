@@ -1,0 +1,68 @@
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+// Import screens
+import 'package:sarpo_uz/postter/qr-code.dart';
+import 'admin/screens/users_list_screen.dart';
+import 'user/screens_user/user_home_page.dart';
+import 'user/services_user/login_page.dart';
+import 'utils/app_constants.dart';
+
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  Future<Widget> _getInitialScreen() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(AppConstants.userTokenKey);
+    final role = prefs.getString(AppConstants.userRoleKey);
+
+    if (token != null) {
+      switch (role) {
+        case 'user':
+          return const UserHomePage();
+        case 'admin':
+          return AdminUserListPage();
+        case 'qr':
+          return BarcodeScannerPage();
+        default:
+          return const LoginPage();
+      }
+    } else {
+      return const LoginPage();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Sarpo CRM',
+      theme: ThemeData(
+        primarySwatch: Colors.red,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
+      ),
+      home: FutureBuilder<Widget>(
+        future: _getInitialScreen(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(color: Colors.black),
+              ),
+            );
+          } else if (snapshot.hasError) {
+            return Scaffold(
+              body: Center(child: Text('Xatolik: ${snapshot.error}')),
+            );
+          } else {
+            return snapshot.data!;
+          }
+        },
+      ),
+    );
+  }
+}

@@ -68,8 +68,11 @@ class _UserHomePageState extends State<UserHomePage>
     final toDate = formatDateToYYYYMMDD(DateTime(_currentMonth.year,
         _currentMonth.month + 1, 0)); // Last day of the month
 
-    final data =
-        await ApiService.getAttendance(_userId!, fromDate, toDate, );
+    final data = await ApiService.getAttendance(
+      _userId!,
+      fromDate,
+      toDate,
+    );
     setState(() {
       _attendanceData = data;
       _isLoadingAttendance = false;
@@ -88,8 +91,11 @@ class _UserHomePageState extends State<UserHomePage>
     final toDate = formatDateToYYYYMMDD(DateTime(_currentMonth.year,
         _currentMonth.month + 1, 0)); // Last day of the month
 
-    final data =
-        await ApiService.getSalary(_userId!, fromDate, toDate,);
+    final data = await ApiService.getSalary(
+      _userId!,
+      fromDate,
+      toDate,
+    );
     setState(() {
       _salaryData = data;
       _isLoadingSalary = false;
@@ -280,20 +286,21 @@ class _UserHomePageState extends State<UserHomePage>
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Text('Sana: $createdAtDate',
+                                      Text(
+                                          'Sana: ${createdAtDate.substring(0, 2)}',
                                           style: const TextStyle(
                                               fontWeight: FontWeight.bold)),
                                       const Divider(),
-                                      Text('Umumiy summa: ${salary.amount}'),
+                                      text("Maosh", "${salary.amount}", ""),
                                       if (salary.advance! > 0)
-                                        Text(
-                                            'Avans: ${salary.advance} (${salary.advanceDescription ?? 'N/A'})'),
+                                        text("Avans", "${salary.advance}",
+                                            "(${salary.advanceDescription})"),
                                       if (salary.fine! > 0)
-                                        Text(
-                                            'Jarima: ${salary.fine} (${salary.fineDescription ?? 'N/A'})'),
+                                        text("Jarima", "${salary.fine}",
+                                            "(${salary.fineDescription})"),
                                       if (salary.bonus! > 0)
-                                        Text(
-                                            'Bonus: ${salary.bonus} (${salary.bonusDescription ?? 'N/A'})'),
+                                        text("Bonus", "${salary.bonus}",
+                                            "(${salary.bonusDescription})"),
                                     ],
                                   ),
                                 ),
@@ -305,6 +312,13 @@ class _UserHomePageState extends State<UserHomePage>
           ),
         ],
       ),
+    );
+  }
+
+  Text text(String text, String summa, String description) {
+    return Text(
+      '$text: $summa $description',
+      style: const TextStyle(fontWeight: FontWeight.bold),
     );
   }
 }
